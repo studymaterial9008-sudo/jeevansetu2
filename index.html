@@ -1,0 +1,347 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#c62828">
+<title>JeevanSetu — Emergency Blood Network</title>
+<style>
+:root{--red:#c62828;--red2:#e53935;--green:#16864a;--ink:#18212b;--muted:#667085;--bg:#f5f7fa;--card:#fff;--line:#e5e7eb;--soft:#fff2f2;--blue:#2563eb}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:var(--bg);color:var(--ink);overflow-x:hidden}
+button,input,select,textarea{font:inherit}button{cursor:pointer;border:0}.appbar{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.95);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;gap:10px;align-items:center;font-weight:900}.drop{width:38px;height:38px;border-radius:12px;background:var(--soft);display:grid;place-items:center;font-size:22px;box-shadow:0 8px 24px #c6282820}
+.wrap{max-width:980px;margin:auto;padding:18px 16px 100px}.hero{background:linear-gradient(135deg,#fff,#fff4f4);border:1px solid #ffd5d5;border-radius:24px;padding:28px;margin:10px 0 18px;box-shadow:0 14px 40px #c6282810}
+h1{font-size:clamp(30px,7vw,50px);line-height:1.05;margin:8px 0 12px;letter-spacing:-1.8px}.hero p{color:var(--muted);font-size:17px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 5px 18px #11111108;margin-bottom:12px}.btn{padding:13px 16px;border-radius:12px;font-weight:900;display:inline-block;text-align:center}.primary{background:var(--red);color:#fff}.success{background:var(--green);color:#fff}.outline{background:#fff;border:1px solid var(--line);color:var(--ink)}.danger{background:#fff0f0;color:#b42318}.blue{background:#2563eb;color:#fff}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.small{font-size:13px;color:var(--muted)}.title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:22px 0 12px}.title h2{margin:0}
+label{display:block;font-size:13px;font-weight:800;margin:12px 0 6px}input,select,textarea{width:100%;padding:12px;border:1px solid #d7dce3;border-radius:11px;background:#fff;outline:none}input:focus,select:focus,textarea:focus{border-color:#e57373;box-shadow:0 0 0 3px #c6282814}
+.formgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 14px}.full{grid-column:1/-1}.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:900;background:#edf7f0;color:var(--green)}.badge.red{background:#fff0f0;color:var(--red)}.badge.blue{background:#eff6ff;color:#2563eb}
+.donor{display:flex;gap:14px;align-items:center}.avatar{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:#fff0f0;font-weight:900;color:var(--red);flex:none}.grow{flex:1}.distance{font-weight:900}.list{display:grid;gap:12px}.stat{font-size:28px;font-weight:900}
+.nav{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.96);backdrop-filter:blur(14px);border-top:1px solid var(--line);display:flex;justify-content:center;gap:4px;padding:8px;z-index:30}.nav button{background:transparent;padding:8px 10px;border-radius:10px;color:var(--muted);font-size:12px}.nav button.active{background:#fff0f0;color:var(--red);font-weight:900}
+.toast{position:fixed;right:16px;bottom:76px;background:#18212b;color:#fff;padding:12px 15px;border-radius:12px;display:none;z-index:50;max-width:330px}.toast.show{display:block}.hidden{display:none!important}
+.notice{padding:13px 15px;border-radius:13px;background:#fff9e8;border:1px solid #f4df9d;color:#7a5b00}.live{padding:13px 15px;border-radius:13px;background:#effaf3;border:1px solid #bfe6ca;color:#126235}
+.request{border-left:4px solid var(--red)}.urgent{animation:pulse 2.5s infinite}@keyframes pulse{50%{box-shadow:inset 0 0 0 3px #c6282810,0 8px 24px #c6282812}}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.step{padding:10px;border-radius:12px;background:#f4f5f7;text-align:center;font-size:12px}.step.on{background:#fff0f0;color:var(--red);font-weight:900}
+@media(max-width:650px){.formgrid{grid-template-columns:1fr}.full{grid-column:auto}.hero{padding:22px}.nav{justify-content:space-around}.nav button{padding:8px 5px}.hero .actions .btn{flex:1;min-width:145px}}
+</style>
+</head>
+<body>
+<div id="app"></div><div id="toast" class="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, query, where, getDocs, onSnapshot, serverTimestamp, orderBy } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js";
+import { firebaseConfig } from "./firebase-config.js";
+
+const configured = firebaseConfig && firebaseConfig.apiKey && firebaseConfig.apiKey !== "PASTE_YOUR_API_KEY";
+let app, auth, db, unsubscribeRequests = null;
+
+if(configured){
+  app = initializeApp(firebaseConfig);
+  auth = getAuth(app);
+  db = getFirestore(app);
+}
+
+const DEMO_DONORS=[
+ {id:"demo1",name:"Rahul Kumar",blood:"B+",mobile:"9000000001",state:"Bihar",district:"Nalanda",city:"Bihar Sharif",distance:1.2,available:true},
+ {id:"demo2",name:"Aman Kumar",blood:"B+",mobile:"9000000002",state:"Bihar",district:"Nalanda",city:"Bihar Sharif",distance:2.8,available:true},
+ {id:"demo3",name:"Pooja Singh",blood:"B+",mobile:"9000000003",state:"Bihar",district:"Nalanda",city:"Bihar Sharif",distance:3.6,available:true},
+ {id:"demo4",name:"Suresh Kumar",blood:"B+",mobile:"9000000004",state:"Bihar",district:"Nalanda",city:"Rajgir",distance:14.4,available:true}
+];
+
+const states=["Bihar","Jharkhand","West Bengal","Delhi","Uttar Pradesh"];
+const districts={Bihar:["Nalanda","Patna","Gaya"],Jharkhand:["Ranchi","Ramgarh","Hazaribagh"],"West Bengal":["Purba Medinipur","Kolkata"],Delhi:["New Delhi"],"Uttar Pradesh":["Agra","Mathura"]};
+
+// Demo hospital/blood-bank directory. In a real deployment this would come from a verified hospital/blood-bank database or API.
+const DEMO_HOSPITALS=[
+ {name:"City Hospital, Bihar Sharif",state:"Bihar",district:"Nalanda",city:"Bihar Sharif",type:"Hospital"},
+ {name:"Nalanda Medical Centre, Bihar Sharif",state:"Bihar",district:"Nalanda",city:"Bihar Sharif",type:"Hospital"},
+ {name:"Sadar Hospital, Bihar Sharif",state:"Bihar",district:"Nalanda",city:"Bihar Sharif",type:"Hospital"},
+ {name:"Nalanda Blood Centre, Bihar Sharif",state:"Bihar",district:"Nalanda",city:"Bihar Sharif",type:"Blood Bank"},
+ {name:"Sadar Hospital, Rajgir",state:"Bihar",district:"Nalanda",city:"Rajgir",type:"Hospital"},
+ {name:"Patna Medical Centre, Patna",state:"Bihar",district:"Patna",city:"Patna",type:"Hospital"},
+ {name:"Patna Blood Bank, Patna",state:"Bihar",district:"Patna",city:"Patna",type:"Blood Bank"},
+ {name:"Gaya Sadar Hospital, Gaya",state:"Bihar",district:"Gaya",city:"Gaya",type:"Hospital"},
+ {name:"Ranchi Sadar Hospital, Ranchi",state:"Jharkhand",district:"Ranchi",city:"Ranchi",type:"Hospital"},
+ {name:"Ranchi Blood Centre, Ranchi",state:"Jharkhand",district:"Ranchi",city:"Ranchi",type:"Blood Bank"},
+ {name:"Ramgarh Sadar Hospital, Ramgarh",state:"Jharkhand",district:"Ramgarh",city:"Ramgarh",type:"Hospital"},
+ {name:"Hazaribagh Sadar Hospital, Hazaribagh",state:"Jharkhand",district:"Hazaribagh",city:"Hazaribagh",type:"Hospital"},
+ {name:"Kolkata General Hospital, Kolkata",state:"West Bengal",district:"Kolkata",city:"Kolkata",type:"Hospital"},
+ {name:"Kolkata Blood Centre, Kolkata",state:"West Bengal",district:"Kolkata",city:"Kolkata",type:"Blood Bank"},
+ {name:"New Delhi General Hospital, New Delhi",state:"Delhi",district:"New Delhi",city:"New Delhi",type:"Hospital"},
+ {name:"Delhi Blood Centre, New Delhi",state:"Delhi",district:"New Delhi",city:"New Delhi",type:"Blood Bank"},
+ {name:"Agra District Hospital, Agra",state:"Uttar Pradesh",district:"Agra",city:"Agra",type:"Hospital"},
+ {name:"Mathura District Hospital, Mathura",state:"Uttar Pradesh",district:"Mathura",city:"Mathura",type:"Hospital"}
+];
+
+function hospitalList(r){
+ const city=(r.city||'').toLowerCase(), district=(r.district||'').toLowerCase(), st=(r.state||'').toLowerCase();
+ let hs=DEMO_HOSPITALS.filter(h=>h.city.toLowerCase()===city);
+ if(!hs.length) hs=DEMO_HOSPITALS.filter(h=>h.district.toLowerCase()===district);
+ if(!hs.length) hs=DEMO_HOSPITALS.filter(h=>h.state.toLowerCase()===st);
+ return hs;
+}
+
+function hospitalDatalist(){return DEMO_HOSPITALS.map(h=>`<option value="${h.name}">${h.type} • ${h.city}, ${h.district}</option>`).join('')}
+let state={page:"home",user:null,request:null,results:[],firebaseReady:configured};
+
+function toast(x){const t=document.getElementById("toast");t.textContent=x;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),3000)}
+function bloodOptions(selected="B+"){return ["A+","A-","B+","B-","AB+","AB-","O+","O-"].map(x=>`<option ${x===selected?"selected":""}>${x}</option>`).join("")}
+function loadDistrict(s,d){const val=document.getElementById(s).value;document.getElementById(d).innerHTML=(districts[val]||["Select district"]).map(x=>`<option>${x}</option>`).join("")}
+function safe(x){return String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function normalizeMobile(x){return String(x||"").replace(/\D/g,"")}
+function loginEmail(mobile){return normalizeMobile(mobile)+"@jeevansetu-demo.invalid"}
+
+function appShell(){document.getElementById("app").innerHTML=`
+<header class="appbar"><div class="brand"><span class="drop">🩸</span> JeevanSetu</div>
+<button class="btn outline" onclick="go('profile')">☰</button></header>
+<main class="wrap"><div id="view"></div></main>${nav()}`;render()}
+function nav(){return `<nav class="nav"><button onclick="go('home')">🏠<br>Home</button><button onclick="go('find')">🩸<br>Find Blood</button><button onclick="go('donor')">❤️<br>Donor</button><button onclick="go('requests')">📋<br>Requests</button><button onclick="go('profile')">👤<br>Profile</button></nav>`}
+window.go=function(p){state.page=p;render();scrollTo({top:0,behavior:"smooth"})}
+
+function render(){
+ const v=document.getElementById("view"); if(!v)return;
+ const p=state.page;
+ v.innerHTML=p==="home"?home():p==="register"?register():p==="login"?login():p==="find"?find():p==="results"?results():p==="emergency"?emergency():p==="donor"?donor():p==="requestdetail"?requestdetail():p==="requests"?requests():p==="profile"?profile():about();
+}
+
+function home(){return `<section class="hero"><div class="badge">Community Emergency Blood Network</div>
+<h1>Find blood.<br>Connect fast.<br>Help each other.</h1>
+<p>JeevanSetu is designed around one simple idea: register once, so that in an emergency you can request matching blood—and when you are able to donate, help another registered person.</p>
+<div class="actions"><button class="btn primary" onclick="go('find')">🔎 FIND BLOOD</button><button class="btn success" onclick="go('register')">🩸 REGISTER</button></div></section>
+<div class="grid">
+<div class="card"><div class="stat">🩸 Register Once</div><p class="small">Register once as Donor or Receiver; the same account can later do both.</p></div>
+<div class="card"><div class="stat">⚡ Exact Match</div><p class="small">Emergency search starts with the exact same blood group and currently available donors.</p></div>
+<div class="card"><div class="stat">📍 Nearby First</div><p class="small">Same city/district/state donors are prioritised, then distance.</p></div>
+</div>
+<div class="title"><h2>How the live system works</h2></div>
+<div class="steps"><div class="step on">1<br>Register</div><div class="step">2<br>Request</div><div class="step">3<br>Donor receives</div><div class="step">4<br>Accept → Contact</div></div>
+<div class="title"><h2>College demo</h2></div><div class="card"><p><b>Scenario:</b> B+ blood is urgently needed in Bihar Sharif.</p><button class="btn primary" onclick="demoRequest()">Run demo scenario</button></div>
+<div class="notice"><b>Prototype:</b> This college demo uses Firebase for live two-device communication. Do not enter real patient/medical data.</div>`}
+
+function register(){
+  const selectedRole = state.registerRole || "";
+  return `<div class="title"><h2>Create JeevanSetu account</h2><span class="badge">Required</span></div>
+  <div class="card">
+    <h3>First choose how you are joining</h3>
+    <p class="small">This is only your <b>starting purpose</b>, not a permanent role. The same account can later receive blood and become a donor.</p>
+    <div class="grid">
+      <button class="card" style="text-align:left;cursor:pointer;border:2px solid ${selectedRole==="donor"?"var(--green)":"var(--line)"}" onclick="chooseRegisterRole('donor')">
+        <div class="stat">🩸 Register as Donor</div>
+        <p class="small">I want to help someone who needs a matching blood group.</p>
+      </button>
+      <button class="card" style="text-align:left;cursor:pointer;border:2px solid ${selectedRole==="receiver"?"var(--red)":"var(--line)"}" onclick="chooseRegisterRole('receiver')">
+        <div class="stat">🆘 Register as Receiver</div>
+        <p class="small">I may need blood during an emergency.</p>
+      </button>
+    </div>
+  </div>
+  ${selectedRole?`<div class="card">
+    <div class="live"><b>${selectedRole==="donor"?"🩸 Donor registration selected":"🆘 Receiver registration selected"}</b>
+    <br><span class="small">You can use this same account for both roles later.</span></div>
+    <div class="formgrid">
+      <div><label>Full name *</label><input id="rname" placeholder="Rahul Kumar"></div>
+      <div><label>Date of birth *</label><input id="rdob" type="date"></div>
+      <div><label>Mobile number *</label><input id="rmobile" inputmode="numeric" maxlength="10" placeholder="10-digit mobile"></div>
+      <div><label>Email (optional)</label><input id="remail" type="email" placeholder="you@example.com"></div>
+      <div><label>Blood group *</label><select id="rblood">${bloodOptions()}</select></div>
+      <div><label>State *</label><select id="rstate" onchange="loadDistrict('rstate','rdistrict')">${states.map(x=>`<option>${x}</option>`).join("")}</select></div>
+      <div><label>District *</label><select id="rdistrict">${districts.Bihar.map(x=>`<option>${x}</option>`).join("")}</select></div>
+      <div><label>City / Area *</label><input id="rcity" placeholder="Bihar Sharif"></div>
+      <div class="full"><label>Address / Area details</label><textarea id="raddress" rows="2" placeholder="Keep it brief; do not enter unnecessary sensitive information"></textarea></div>
+      <div><label>Password *</label><input id="rpass" type="password" placeholder="At least 6 characters"></div>
+      <div><label>Confirm password *</label><input id="rpass2" type="password"></div>
+      <div class="full"><label><input id="ravail" type="checkbox" ${selectedRole==="donor"?"checked":""} style="width:auto"> I am currently available to donate blood.</label>
+      <p class="small">You can turn donor availability ON/OFF anytime from Donor Dashboard.</p></div>
+    </div>
+    <button class="btn success" onclick="registerUser()">CREATE ACCOUNT</button>
+  </div>`:""}
+  <p class="small">Already registered? <button class="btn outline" onclick="go('login')">Login</button></p>`
+}
+window.chooseRegisterRole=function(role){ state.registerRole=role; go("register"); }
+
+window.registerUser=async function(){
+  if(!state.firebaseReady)return toast("First add your Firebase configuration.");
+  if(!state.registerRole)return toast("Please choose Donor or Receiver first.");
+  const g=id=>document.getElementById(id).value.trim();
+  const mobile=normalizeMobile(g("rmobile"));
+  if(!g("rname")||!g("rdob")||mobile.length!==10||!g("rpass"))return toast("Name, DOB, 10-digit mobile and password are required.");
+  if(g("rpass").length<6)return toast("Password must be at least 6 characters.");
+  if(g("rpass")!==g("rpass2"))return toast("Passwords do not match.");
+  try{
+   const cred=await createUserWithEmailAndPassword(auth,loginEmail(mobile),g("rpass"));
+   const user={uid:cred.user.uid,name:g("rname"),dob:g("rdob"),mobile,email:g("remail"),blood:g("rblood"),state:g("rstate"),district:g("rdistrict"),city:g("rcity"),address:g("raddress"),initialRole:state.registerRole,available:document.getElementById("ravail").checked,canRequest:true,canDonate:true,createdAt:serverTimestamp()};
+   await setDoc(doc(db,"users",cred.user.uid),user);
+   state.user=user; state.registerRole="";
+   toast("Account created successfully"); go("profile");
+  }catch(e){toast(e.code==="auth/email-already-in-use"?"This mobile is already registered. Please login.":e.message)}
+}
+
+function login(){return `<div class="title"><h2>Login</h2><span class="badge blue">One account • Both roles</span></div><div class="card"><p class="small">Same login can be used to request blood and to donate blood later.</p><label>Mobile number *</label><input id="lmobile" inputmode="numeric" maxlength="10" placeholder="Registered 10-digit mobile"><label>Password *</label><input id="lpass" type="password" placeholder="Password"><div class="actions"><button class="btn primary" onclick="loginUser()">LOGIN</button><button class="btn outline" onclick="go('register')">REGISTER</button></div></div>`}
+window.loginUser=async function(){
+ if(!state.firebaseReady)return toast("First add your Firebase configuration.");
+ const mobile=normalizeMobile(document.getElementById("lmobile").value), pass=document.getElementById("lpass").value;
+ if(mobile.length!==10||!pass)return toast("Enter registered mobile and password.");
+ try{await signInWithEmailAndPassword(auth,loginEmail(mobile),pass);toast("Login successful");go("profile")}
+ catch(e){toast("Login details are incorrect or account is not registered.")}
+}
+
+function find(){
+ if(!state.user)return `<div class="title"><h2>Emergency Blood Help</h2><span class="badge red">Registration required</span></div><div class="card"><h3>🛡️ Register before requesting</h3><p class="small">JeevanSetu is a community network. Everyone registers once so they can request help in an emergency and help another person when they are able to donate.</p><div class="actions"><button class="btn success" onclick="go('register')">REGISTER NOW</button><button class="btn primary" onclick="go('login')">LOGIN</button></div></div>`;
+ return `<div class="title"><h2>Emergency Blood Help</h2><span class="badge red">Emergency ready</span></div>
+ <div class="card"><p class="small">Main matching rule: <b>exact same blood group + donor available now</b>. Location is used to prioritise nearby matches. Hospital is only the emergency coordination location.</p>
+ <div class="formgrid"><div><label>Required blood group *</label><select id="fblood">${bloodOptions("B+")}</select></div>
+ <div><label>Units required *</label><input id="funits" type="number" min="1" value="1"></div>
+ <div><label>State *</label><select id="fstate" onchange="loadDistrict('fstate','fdistrict')">${states.map(x=>`<option>${x}</option>`).join("")}</select></div>
+ <div><label>District *</label><select id="fdistrict">${districts.Bihar.map(x=>`<option>${x}</option>`).join("")}</select></div>
+ <div><label>City / Area *</label><input id="fcity" value="Bihar Sharif"></div>
+ <div><label>Hospital / Blood Bank *</label><input id="fhospital" list="hospital-list" value="City Hospital, Bihar Sharif" placeholder="Select/search nearby hospital or blood bank"><datalist id="hospital-list">${hospitalDatalist()}</datalist></div>
+ <div><label>Required by</label><input id="fwhen" type="datetime-local"></div>
+ <div><label>Emergency level</label><select id="flevel"><option>Critical</option><option>Urgent</option><option>Normal</option></select></div></div>
+ <div class="actions"><button class="btn primary" onclick="searchDonors()">🔎 FIND MATCHING DONORS</button><button class="btn danger" onclick="go('emergency')">🚨 CREATE EMERGENCY REQUEST</button></div>
+ <p class="small">Ranking: exact same blood group → donor available now → same city → same district → same state → other state → nearest distance. Hospital/blood-bank is used for emergency coordination and nearby facility information; it does not decide blood compatibility.</p></div>`
+}
+
+window.searchDonors=async function(){
+ if(!state.user)return toast("Please register/login first.");
+ const req={blood:document.getElementById("fblood").value,units:+document.getElementById("funits").value,state:document.getElementById("fstate").value,district:document.getElementById("fdistrict").value,city:document.getElementById("fcity").value.trim(),hospital:document.getElementById("fhospital").value.trim(),level:document.getElementById("flevel").value};
+ if(!req.units||!req.city||!req.hospital)return toast("Please complete the required fields.");
+ try{
+  const q=query(collection(db,"users"),where("blood","==",req.blood),where("available","==",true));
+  const snap=await getDocs(q);
+  let donors=snap.docs.map(x=>({id:x.id,...x.data()}));
+  donors=donors.map(d=>({...d,distance:estimateDistance(d,req)})).sort((a,b)=>score(b,req)-score(a,req));
+  state.request=req;state.results=donors;state.page="results";render();
+ }catch(e){toast("Could not load donor matches. Check Firebase setup/rules.")}
+}
+
+function estimateDistance(d,r){return d.city===r.city?1.2:d.district===r.district?12.5:d.state===r.state?55:180}
+function score(d,r){return (d.city===r.city?50:0)+(d.district===r.district?30:0)+(d.state===r.state?15:0)-d.distance}
+function results(){
+ const r=state.request||{};const ds=state.results||[];
+ return `<div class="title"><h2>Matching Donors</h2><span class="badge">${ds.length} available</span></div>
+ <div class="card"><p><b>${safe(r.blood)}</b> • ${safe(r.units)} unit(s) • ${safe(r.city)}</p><p class="small">Hospital / Blood Bank: ${safe(r.hospital)}</p><p class="small"><b>Donor matching:</b> exact same blood group + available donor. Then location priority: same city → same district → same state → other state, with nearest distance used within the priority.</p></div>
+ <div class="title"><h3>🏥 Nearby Hospitals / Blood Banks</h3></div>
+ <div class="list">${hospitalList(r).length?hospitalList(r).map(h=>`<div class="card"><b>${safe(h.name)}</b><div class="small">${safe(h.type)} • ${safe(h.city)}, ${safe(h.district)}, ${safe(h.state)}</div></div>`).join(""):`<div class="card"><p class="small">No demo facility is listed for this location. In production, this section should use a verified hospital/blood-bank directory.</p></div>`}</div>
+ <div class="title"><h3>🩸 Matching Donors</h3></div>
+ <div class="list">${ds.length?ds.map(d=>donorCard(d,r)).join(""):`<div class="card"><h3>No currently available ${safe(r.blood)} donor found</h3><p class="small">Try another location or create an emergency request so registered donors can respond.</p></div>`}</div>
+ <div class="actions"><button class="btn danger" onclick="go('emergency')">🚨 CREATE EMERGENCY REQUEST</button><button class="btn outline" onclick="go('find')">CHANGE SEARCH</button></div>`
+}
+function donorCard(d,r){return `<div class="card donor"><div class="avatar">${safe((d.name||"?")[0])}</div><div class="grow"><b>${safe(d.name)}</b><div><span class="badge">${safe(d.blood)}</span> <span class="small">${safe(d.distance)} km approx.</span></div><div class="small">Available now • ${safe(d.city)}, ${safe(d.district)}</div></div><button class="btn success" onclick="sendRequest('${d.id}')">SEND REQUEST</button></div>`}
+
+window.sendRequest=async function(donorId){
+ if(!state.user)return toast("Please login first.");
+ if(!state.request)return toast("Create a request first.");
+ try{
+  const donor=state.results.find(x=>x.id===donorId);
+  const payload={requesterId:state.user.uid,requesterName:state.user.name,requesterMobile:state.user.mobile,donorId,donorName:donor.name,donorMobile:donor.mobile||"",blood:state.request.blood,units:state.request.units,state:state.request.state,district:state.request.district,city:state.request.city,hospital:state.request.hospital,level:state.request.level,status:"Sent",createdAt:serverTimestamp()};
+  const ref=await addDoc(collection(db,"requests"),payload);state.request={...payload,id:ref.id};toast("Request sent to donor");go("requests");
+ }catch(e){toast("Request could not be sent. Check Firebase rules.")}
+}
+
+function emergency(){if(!state.user)return `<div class="card"><h3>Registration required</h3><button class="btn success" onclick="go('register')">REGISTER</button></div>`;return `<div class="title"><h2>Emergency Blood Request</h2><span class="badge red">Critical</span></div>
+<div class="card"><div class="formgrid"><div><label>Requester name</label><input id="ename" value="${safe(state.user.name)}"></div><div><label>Patient reference</label><input id="epatient" placeholder="Optional reference"></div>
+<div><label>Blood group *</label><select id="eblood">${bloodOptions(state.user.blood)}</select></div><div><label>Units required *</label><input id="eunits" type="number" value="1" min="1"></div>
+<div><label>State *</label><select id="estate" onchange="loadDistrict('estate','edistrict')">${states.map(x=>`<option ${x===state.user.state?"selected":""}>${x}</option>`).join("")}</select></div>
+<div><label>District *</label><select id="edistrict">${(districts[state.user.state]||districts.Bihar).map(x=>`<option ${x===state.user.district?"selected":""}>${x}</option>`).join("")}</select></div>
+<div><label>City / Area *</label><input id="ecity" value="${safe(state.user.city)}"></div><div><label>Hospital / Blood Bank *</label><input id="ehospital" placeholder="Hospital or blood bank"></div>
+<div class="full"><label>Message</label><textarea id="emsg" rows="3" placeholder="Only useful non-sensitive information"></textarea></div></div>
+<div class="actions"><button class="btn primary" onclick="createEmergency()">SUBMIT EMERGENCY REQUEST</button></div>
+<p class="small">This sends the emergency request into the shared Firebase database. Matching donors can receive it on their own phone.</p></div>`}
+
+window.createEmergency=async function(){
+ if(!state.user)return toast("Please register/login first.");
+ const g=id=>document.getElementById(id).value.trim();
+ const blood=g("eblood"), units=+g("eunits"), city=g("ecity"), hospital=g("ehospital");
+ if(!blood||!units||!city||!hospital)return toast("Please complete required fields.");
+ try{
+  const q=query(collection(db,"users"),where("blood","==",blood),where("available","==",true));
+  const snap=await getDocs(q);const donors=snap.docs.map(x=>({id:x.id,...x.data()}));
+  const base={requesterId:state.user.uid,requesterName:g("ename"),requesterMobile:state.user.mobile,blood,units,state:g("estate"),district:g("edistrict"),city,hospital,level:"Critical",message:g("emsg"),status:"Open",createdAt:serverTimestamp()};
+  // Create one request per matching donor so every eligible donor can see it live.
+  if(!donors.length){await addDoc(collection(db,"requests"),base);toast("Emergency request published; no matching donor is currently available.");go("requests");return}
+  for(const d of donors){await addDoc(collection(db,"requests"),{...base,donorId:d.id,donorName:d.name,donorMobile:d.mobile||"",status:"Sent"});}
+  toast("Emergency request sent to matching donors");go("requests");
+ }catch(e){toast("Emergency request failed. Check Firebase setup/rules.")}
+}
+
+function donor(){
+ if(!state.user)return `<div class="title"><h2>Donor Dashboard</h2></div><div class="card"><h3>Account required</h3><button class="btn success" onclick="go('register')">REGISTER</button></div>`;
+ return `<div class="title"><h2>Donor Dashboard</h2><span class="badge">${safe(state.user.blood)}</span></div>
+ <div class="card"><h3>Hello, ${safe(state.user.name)}</h3><p><span class="badge">${safe(state.user.blood)}</span> <span class="badge ${state.user.available?"":"red"}">${state.user.available?"Available":"Unavailable"}</span></p>
+ <div class="actions"><button class="btn outline" onclick="toggleAvailability()">${state.user.available?"🟢 AVAILABLE — TAP TO PAUSE":"⚪ PAUSED — TAP TO AVAILABLE"}</button><button class="btn outline" onclick="go('profile')">MY PROFILE</button></div></div>
+ <div class="title"><h2>Incoming requests</h2><span class="badge blue">LIVE</span></div><div id="incoming"><div class="card"><p class="small">Loading live requests…</p></div></div>`;
+}
+
+async function listenDonorRequests(){
+ if(unsubscribeRequests)unsubscribeRequests();
+ if(!state.user||state.page!=="donor")return;
+ const q=query(collection(db,"requests"),where("donorId","==",state.user.uid));
+ unsubscribeRequests=onSnapshot(q,snap=>{
+  const rows=snap.docs.map(x=>({id:x.id,...x.data()})).filter(x=>x.status==="Sent"||x.status==="Accepted").sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+  const el=document.getElementById("incoming"); if(!el)return;
+  el.innerHTML=rows.length?rows.map(incomingCard).join(""):`<div class="card"><p class="small">No incoming requests right now.</p></div>`;
+  if(rows.some(x=>x.status==="Sent"))toast("🔔 New blood request received");
+ },e=>{const el=document.getElementById("incoming");if(el)el.innerHTML=`<div class="card"><p class="small">Live request feed could not load. Check Firestore rules.</p></div>`});
+}
+function incomingCard(r){return `<div class="card request urgent"><div class="badge red">${safe(r.level||"Emergency")}</div><h3>🩸 ${safe(r.blood)} — ${safe(r.units)} unit(s)</h3><p><b>${safe(r.hospital)}</b><br>${safe(r.city)}, ${safe(r.district)}, ${safe(r.state)}</p><p class="small">Requester: ${safe(r.requesterName)}</p>${r.status==="Sent"?`<div class="actions"><button class="btn success" onclick="acceptRequest('${r.id}')">✅ ACCEPT</button><button class="btn danger" onclick="declineRequest('${r.id}')">DECLINE</button></div>`:`<div class="live"><b>Accepted.</b> Requester can now contact you.</div>`}</div>`}
+
+window.acceptRequest=async function(id){try{await updateDoc(doc(db,"requests",id),{status:"Accepted",acceptedAt:serverTimestamp()});toast("Request accepted");go("requests")}catch(e){toast("Could not accept request.")}}
+window.declineRequest=async function(id){try{await updateDoc(doc(db,"requests",id),{status:"Declined",declinedAt:serverTimestamp()});toast("Request declined")}catch(e){toast("Could not decline request.")}}
+window.toggleAvailability=async function(){try{const next=!state.user.available;await updateDoc(doc(db,"users",state.user.uid),{available:next});state.user.available=next;toast(next?"You are available for requests":"Availability paused");render()}catch(e){toast("Could not update availability.")}}
+
+function requests(){if(!state.user)return `<div class="card"><p>Please login first.</p></div>`;return `<div class="title"><h2>My Requests</h2><span class="badge blue">LIVE</span></div><div id="myrequests"><div class="card"><p class="small">Loading…</p></div></div>`}
+async function listenMyRequests(){
+ const el=document.getElementById("myrequests");if(!el||!state.user)return;
+ const q=query(collection(db,"requests"),where("requesterId","==",state.user.uid));
+ onSnapshot(q,snap=>{
+  const rows=snap.docs.map(x=>({id:x.id,...x.data()})).sort((a,b)=>(b.createdAt?.seconds||0)-(a.createdAt?.seconds||0));
+  el.innerHTML=rows.length?rows.map(requestCard).join(""):`<div class="card"><p class="small">No requests yet.</p></div>`;
+ },()=>{el.innerHTML=`<div class="card"><p class="small">Could not load requests.</p></div>`});
+}
+function requestCard(r){return `<div class="card request"><div class="badge ${r.status==="Accepted"?"":"red"}">${safe(r.status||"Open")}</div><h3>${safe(r.blood)} • ${safe(r.units)} unit(s)</h3><p>${safe(r.hospital)}<br>${safe(r.city)}, ${safe(r.district)}, ${safe(r.state)}</p><p class="small">Donor: ${safe(r.donorName||"Waiting for a matching donor")}</p><button class="btn outline" onclick="showRequest(${JSON.stringify(r).replace(/"/g,'&quot;')})">VIEW</button></div>`}
+window.showRequest=function(r){state.request=r;go("requestdetail")}
+
+function requestdetail(){const r=state.request;if(!r)return `<div class="card">No request.</div>`;const accepted=r.status==="Accepted";const mobile=normalizeMobile(r.donorMobile);return `<div class="title"><h2>Request Details</h2><span class="badge ${accepted?"":"red"}">${safe(r.status)}</span></div>
+<div class="card"><p><b>Blood:</b> ${safe(r.blood)}</p><p><b>Units:</b> ${safe(r.units)}</p><p><b>Hospital:</b> ${safe(r.hospital)}</p><p><b>Location:</b> ${safe(r.city)}, ${safe(r.district)}, ${safe(r.state)}</p><p><b>Donor:</b> ${safe(r.donorName||"Waiting")}</p>
+${accepted&&mobile?`<div class="live"><h3>✅ Donor accepted</h3><p class="small">Contact is available after acceptance.</p><div class="actions"><a class="btn success" href="tel:${mobile}" style="text-decoration:none">📞 CALL DONOR</a><a class="btn blue" target="_blank" rel="noopener" href="https://wa.me/${mobile}?text=${encodeURIComponent("Hello "+(r.donorName||"Donor")+", your JeevanSetu blood request has been accepted. Please coordinate with the hospital.")}" style="text-decoration:none">💬 WHATSAPP</a></div></div>`:""}</div><button class="btn outline" onclick="go('requests')">BACK</button>`}
+
+function profile(){return state.user?`<div class="title"><h2>My Profile</h2></div><div class="card">
+<div class="grid">
+<div><p class="small">Name</p><b>${safe(state.user.name)}</b></div>
+<div><p class="small">Blood group</p><b>${safe(state.user.blood)}</b></div>
+<div><p class="small">Mobile</p><b>${safe(state.user.mobile)}</b></div>
+<div><p class="small">Location</p><b>${safe(state.user.city)}, ${safe(state.user.district)}</b></div>
+<div><p class="small">Joined as</p><b>${state.user.initialRole==="donor"?"🩸 Donor":"🆘 Receiver"}</b></div>
+<div><p class="small">Donor status</p><b>${state.user.available?"🟢 Available":"⚪ Unavailable"}</b></div>
+</div>
+<hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+<div class="live"><b>🔄 One account = Receiver + Donor</b><br><span class="small">Need blood? Find Blood. Can donate? Turn availability ON.</span></div>
+<div class="actions"><button class="btn primary" onclick="go('find')">🆘 FIND BLOOD</button><button class="btn success" onclick="go('donor')">🩸 DONOR DASHBOARD</button><button class="btn danger" onclick="logoutUser()">LOG OUT</button></div>
+</div>`:`<div class="title"><h2>Account</h2></div><div class="card"><p>Register once for the JeevanSetu community network.</p><div class="actions"><button class="btn success" onclick="go('register')">REGISTER</button><button class="btn primary" onclick="go('login')">LOGIN</button></div></div>`}
+
+window.logoutUser=async function(){try{await signOut(auth);state.user=null;state.request=null;if(unsubscribeRequests)unsubscribeRequests();toast("Logged out");go("home")}catch(e){toast("Logout failed")}}
+
+function about(){return `<div class="title"><h2>About JeevanSetu</h2></div><div class="card"><h3>Purpose</h3><p>JeevanSetu is a college prototype for connecting registered citizens with matching blood-group donors during emergencies.</p><p class="small">It is not a blood bank and does not replace hospital/blood-bank verification or medical advice.</p></div>`}
+window.demoRequest=async function(){if(!state.user){go("register");toast("Register first, then run the demo.");return}state.request={blood:"B+",units:2,state:"Bihar",district:"Nalanda",city:"Bihar Sharif",hospital:"City Hospital, Bihar Sharif",level:"Critical"};await searchDemo()}
+async function searchDemo(){try{const q=query(collection(db,"users"),where("blood","==","B+"),where("available","==",true));const snap=await getDocs(q);state.results=snap.docs.map(x=>({id:x.id,...x.data(),distance:estimateDistance(x.data(),state.request)})).sort((a,b)=>score(b,state.request)-score(a,state.request));go("results")}catch(e){toast("Firebase is not connected yet.")}}
+
+function setupScreen(){document.getElementById("app").innerHTML=`<main class="wrap"><section class="hero"><div class="badge red">One-time setup</div><h1>Connect JeevanSetu to Firebase</h1><p>Live two-phone requests need a shared online database. Add your Firebase web configuration in <b>firebase-config.js</b>, then refresh this page.</p><div class="notice"><b>Do not paste passwords or private patient data into Firebase config.</b> The web config itself is okay to be present in a frontend; Firestore Security Rules control database access.</div><div class="actions"><a class="btn primary" href="https://console.firebase.google.com/" target="_blank">OPEN FIREBASE CONSOLE</a></div></section></main>`}
+
+function startListeners(){
+ onAuthStateChanged(auth,async u=>{
+  if(!u){state.user=null;render();return}
+  const snap=await getDoc(doc(db,"users",u.uid));
+  if(snap.exists()){state.user={uid:u.uid,...snap.data()};}
+  render();
+ });
+}
+
+appShell();
+if(!configured){setupScreen()}else{startListeners()}
+setInterval(()=>{if(state.page==="donor")listenDonorRequests();if(state.page==="requests")listenMyRequests()},1200);
+window.loadDistrict=loadDistrict;
+</script>
+</body>
+</html>
